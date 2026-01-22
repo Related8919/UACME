@@ -1,0 +1,61 @@
+name: Build UACME
+
+# Windows MSBuild workflow for UACME
+# 调整说明：
+# - 如果解决方案文件名或路径不是 Source/UACME.sln，请修改 `SOLUTION_PATH` 环境变量。
+# - x86 平台使用 Win32 标识（如果你的项目使用其它平台名请修改 matrix.platform)。
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+
+env:
+  SOLUTION_PATH: Source/UACME.sln
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        configuration: [Release]
+        platform: ["Win32", "x64"]
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Install NuGet CLI
+      # 安装 nuget 命令行（用于 restore）
+      run: choco install nuget.commandline -y
+      shell: powershell
+
+    - name: Restore NuGet packages (if any)
+      run: |
+        if (Test-Path $env:SOLUTION_PATH) {
+          nuget restore $env:SOLUTION_PATH
+        } else {
+          Write-Host "Solution not found at $env:SOLUTION_PATH — attempting `nuget restore` in repo root"
+          nuget restore
+        }
+      shell: powershell
+
+    - name: Build solution with MSBuild
+      run: |
+        if (!(Test-Path $env:SOLUTION_PATH)) {
+          Write-Error "Solution file not found at $env:SOLUTION_PATH"
+          exit 1
+        }
+        msbuild $env:SOLUTION_PATH /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} /m
+      shell: powershell
+
+    - name: Collect build artifacts
+      # 根据仓库实际输出位置调整 path
+      uses: actions/upload-artifact@v4
+      with:
+        name: uacme-${{ matrix.platform }}-${{ matrix.configuration }}
+        path: |
+          Source/**/bin/**
+          Bin/**
