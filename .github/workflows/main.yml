@@ -37,7 +37,7 @@ jobs:
         if (Test-Path $env:SOLUTION_PATH) {
           nuget restore $env:SOLUTION_PATH
         } else {
-          Write-Host "Solution not found at $env:SOLUTION_PATH — attempting `nuget restore` in repo root"
+          Write-Host "Solution not found at $env:SOLUTION_PATH - attempting nuget restore in repo root"
           nuget restore
         }
       shell: powershell
